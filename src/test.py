@@ -1,6 +1,6 @@
 import pytest
 import warnings
-from model import load_kb, query_ai_model, validate_ai_response, get_system_prompt_schema, golden_master_hash
+from src.model import load_kb, query_ai_model, validate_ai_response, get_system_prompt_schema, golden_master_hash
 
 # Force Pydantic v2 deprecation warnings (.dict, .parse_obj, .schema) to fail pytest
 warnings.filterwarnings("error", category=DeprecationWarning)

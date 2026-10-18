@@ -1,11 +1,10 @@
-import hashlib
-import json
-import os
+import hashlib, json, os
 from pathlib import Path
 from typing import Dict, Any
 from openai import OpenAI
-from schema import AIQueryResult
-
+from src.schema import AIQueryResult
+from dotenv import load_dotenv
+load_dotenv()
 KB_FILE = Path(__file__).parent / "knowledge_base.txt"
 
 
@@ -19,7 +18,12 @@ def get_system_prompt_schema() -> Dict[str, Any]:
     """Generates the JSON schema injected into the AI system prompt."""
     # Breaks in v2: .schema() -> use .model_json_schema()
     s = AIQueryResult.schema()
-    return {"title": s["title"], "required": sorted(s.get("required", [])), "properties": list(s.get("properties", {}).keys())}
+    return {
+        "title": s["title"],
+        "required": sorted(s.get("required", [])),
+        "definitions": s.get("definitions", s.get("$defs", {})),
+        "properties": s.get("properties", {}),
+    }
 
 
 def query_ai_model(question: str) -> Dict[str, Any]:
@@ -38,13 +42,21 @@ def query_ai_model(question: str) -> Dict[str, Any]:
         )
         kb_context = "\n".join(f"{k}: {v}" for k, v in kb.items())
         res = client.chat.completions.create(
-            model="nvidia/Nemotron-3.5-Lightning",
+            model="nvidia/Nemotron-3_5-Lightning",
             messages=[
                 {
                     "role": "system",
                     "content": (
-                        f"Answer using ONLY the knowledge base below. "
-                        f"Return strict JSON matching this schema: {json.dumps(schema_def)}\n\n"
+                        "Answer the user question using ONLY the Knowledge Base below.\n"
+                        "You MUST return valid JSON with this exact structure:\n"
+                        '{\n'
+                        '  "query": "<the user question ending with ?>",\n'
+                        '  "answer": "<exact fact from knowledge base>",\n'
+                        '  "confidence": 0.95,\n'
+                        '  "sources": [{"kb_id": "KB-XX", "fact": "<exact fact text>"}],\n'
+                        '  "verified": true\n'
+                        '}\n\n'
+                        f"Full Schema Definition: {json.dumps(schema_def)}\n\n"
                         f"Knowledge Base:\n{kb_context}"
                     ),
                 },

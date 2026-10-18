@@ -2,4 +2,5 @@
 .venv
 pyproject.toml
 __pycache__
+.pytest_cache
 __init__.py
